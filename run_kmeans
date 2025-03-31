@@ -1,0 +1,82 @@
+function [X, y] = generate_data(n_samples, n_features, centers, random_state)
+    if nargin < 1
+        n_samples = 500;
+    end
+    if nargin < 2
+        n_features = 2;
+    end
+    if nargin < 3
+        centers = 4;
+    end
+    if nargin < 4
+        random_state = 42;
+    end
+    
+    rng(random_state);
+    
+ 
+    true_centers = 5 * randn(centers, n_features);
+    
+
+    X = zeros(n_samples, n_features);
+    y = zeros(n_samples, 1);
+    
+  
+    samples_per_center = floor(n_samples / centers);
+    
+    for i = 1:centers
+        start_idx = 1 + (i-1) * samples_per_center;
+        end_idx = i * samples_per_center;
+        
+        if i == centers
+            end_idx = n_samples; 
+        end
+        
+        n_center_samples = end_idx - start_idx + 1;
+        
+      
+        X(start_idx:end_idx, :) = repmat(true_centers(i, :), n_center_samples, 1) + randn(n_center_samples, n_features);
+        y(start_idx:end_idx) = i;
+    end
+end
+
+
+[X, y_true] = generate_data(500, 2, 4);
+
+
+X_mean = mean(X);
+X_std = std(X);
+X_scaled = (X - repmat(X_mean, size(X, 1), 1)) ./ repmat(X_std, size(X, 1), 1);
+
+
+kmeans_model = KMeansClustering(4);
+kmeans_model = kmeans_model.fit(X_scaled);
+
+
+figure('Position', [100, 100, 800, 600]);
+
+
+cmap = hsv(kmeans_model.k);
+
+
+hold on;
+for i = 1:kmeans_model.k
+    cluster_points = X_scaled(kmeans_model.labels == i, :);
+    scatter(cluster_points(:, 1), cluster_points(:, 2), 50, 'filled', ...
+        'MarkerFaceColor', cmap(i, :), 'MarkerEdgeColor', 'k', 'LineWidth', 0.5);
+end
+
+
+scatter(kmeans_model.centroids(:, 1), kmeans_model.centroids(:, 2), 200, 'x', ...
+    'MarkerEdgeColor', 'k', 'LineWidth', 2);
+
+title('K-means Clustering Results', 'FontSize', 16);
+xlabel('Feature 1', 'FontSize', 14);
+ylabel('Feature 2', 'FontSize', 14);
+grid on;
+legend('Cluster 1', 'Cluster 2', 'Cluster 3', 'Cluster 4', 'Centroids', 'Location', 'best');
+hold off;
+
+
+fprintf('K-means clustering completed with %d clusters\n', kmeans_model.k);
+fprintf('Inertia: %.4f\n', kmeans_model.inertia);
