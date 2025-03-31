@@ -1,0 +1,129 @@
+classdef KMeansClustering
+    properties
+        k              
+        max_iterations  
+        tolerance       
+        random_state    
+        centroids       
+        labels          
+        inertia         
+    end
+    
+    methods
+        function obj = KMeansClustering(k, max_iterations, tolerance, random_state)
+           
+            if nargin < 1
+                obj.k = 3;
+            else
+                obj.k = k;
+            end
+            
+            if nargin < 2
+                obj.max_iterations = 100;
+            else
+                obj.max_iterations = max_iterations;
+            end
+            
+            if nargin < 3
+                obj.tolerance = 0.0001;
+            else
+                obj.tolerance = tolerance;
+            end
+            
+            if nargin < 4
+                obj.random_state = 42;
+            else
+                obj.random_state = random_state;
+            end
+            
+            obj.centroids = [];
+            obj.labels = [];
+            obj.inertia = Inf;
+        end
+        
+        function centroids = initialize_centroids(obj, X)
+           
+            rng(obj.random_state); 
+            n_samples = size(X, 1);
+            indices = randperm(n_samples, obj.k);
+            centroids = X(indices, :);
+        end
+        
+        function labels = assign_clusters(obj, X, centroids)
+            
+            n_samples = size(X, 1);
+            labels = zeros(n_samples, 1);
+            
+            for i = 1:n_samples
+                distances = zeros(obj.k, 1);
+                for j = 1:obj.k
+                    distances(j) = sqrt(sum((X(i, :) - centroids(j, :)).^2));
+                end
+                [~, labels(i)] = min(distances);
+            end
+        end
+        
+        function centroids = update_centroids(obj, X, labels)
+            
+            n_features = size(X, 2);
+            centroids = zeros(obj.k, n_features);
+            
+            for i = 1:obj.k
+                cluster_points = X(labels == i, :);
+                if ~isempty(cluster_points)
+                    centroids(i, :) = mean(cluster_points, 1);
+                else
+                    
+                    centroids(i, :) = obj.centroids(i, :);
+                end
+            end
+        end
+        
+        function inertia = calculate_inertia(obj, X, labels, centroids)
+            
+            inertia = 0;
+            n_samples = size(X, 1);
+            
+            for i = 1:n_samples
+                cluster_idx = labels(i);
+                inertia = inertia + sum((X(i, :) - centroids(cluster_idx, :)).^2);
+            end
+        end
+        
+        function obj = fit(obj, X)
+            
+            
+            obj.centroids = obj.initialize_centroids(X);
+            
+            
+            for iteration = 1:obj.max_iterations
+              
+                obj.labels = obj.assign_clusters(X, obj.centroids);
+                
+               
+                old_centroids = obj.centroids;
+                
+                
+                obj.centroids = obj.update_centroids(X, obj.labels);
+                
+ 
+                centroid_changes = zeros(obj.k, 1);
+                for i = 1:obj.k
+                    centroid_changes(i) = norm(obj.centroids(i, :) - old_centroids(i, :));
+                end
+                
+                if all(centroid_changes < obj.tolerance)
+                    break;
+                end
+            end
+            
+        
+            obj.inertia = obj.calculate_inertia(X, obj.labels, obj.centroids);
+        end
+        
+        function labels = predict(obj, X)
+          
+            labels = obj.assign_clusters(X, obj.centroids);
+        end
+    end
+end
